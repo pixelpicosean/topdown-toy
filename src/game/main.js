@@ -67,48 +67,10 @@ game.module(
       }).addTo(game.scene.world);
 
       // Streams
+      var whenChangeDir = game.R.fromEvents(game.scene.events, 'axeschange');
+
       var whenKeydown = game.R.fromEvents(game.scene.events, 'keydown');
       var whenKeyup = game.R.fromEvents(game.scene.events, 'keyup');
-
-      function keyToDir(key) {
-        switch (key) {
-          case KEYS.LEFT:
-            return LEFT;
-          case KEYS.RIGHT:
-            return RIGHT;
-          case KEYS.UP:
-            return UP;
-          case KEYS.DOWN:
-            return DOWN;
-          default:
-            return ZERO;
-        }
-      }
-      function keyToOpDir(key) {
-        switch (key) {
-          case KEYS.LEFT:
-            return RIGHT;
-          case KEYS.RIGHT:
-            return LEFT;
-          case KEYS.UP:
-            return DOWN;
-          case KEYS.DOWN:
-            return UP;
-          default:
-            return ZERO;
-        }
-      }
-
-      // TODO: do not let buttons affect movement
-      var keyChangeDir = game.R.merge([
-        whenKeydown.map(keyToDir),
-        whenKeyup.map(keyToOpDir)
-      ])
-      .scan(function(currDir, dir) {
-        return currDir.add(dir);
-      }, ZERO.clone());
-      var padChangeDir = game.R.fromEvents(game.scene.events, 'axeschange');
-      var whenChangeDir = game.R.merge([keyChangeDir, padChangeDir]);
 
       var whenToRun = whenChangeDir.filter(function(dir) {
         return (dir.x !== 0) || (dir.y !== 0);
@@ -162,7 +124,8 @@ game.module(
   game.createScene('Main', {
   	backgroundColor: '#000',
     pad: null,
-    t3: null, // t3 axis
+    t3: null, // t3 axis value
+    t3Dir: null, // t3 direction vector
     init: function() {
       this.world = new game.World(0, 0);
       this.events = new game.EventEmitter();
@@ -170,6 +133,7 @@ game.module(
       new Cog(120, 120, this.stage);
 
       this.t3 = new game.Vector();
+      this.t3Dir = new game.Vector();
       game.gamepad.onConnect(function(pad) {
         this.pad = pad;
 
@@ -182,10 +146,56 @@ game.module(
     },
 
     keydown: function(key) {
-      this.pad || this.events.emit('keydown', key);
+      switch (key) {
+        case KEYS.UP:
+          this.t3Dir.add(UP);
+          this.t3.copy(this.t3Dir).normalize();
+          this.events.emit('axeschange', this.t3);
+          break;
+        case KEYS.DOWN:
+          this.t3Dir.add(DOWN);
+          this.t3.copy(this.t3Dir).normalize();
+          this.events.emit('axeschange', this.t3);
+          break;
+        case KEYS.LEFT:
+          this.t3Dir.add(LEFT);
+          this.t3.copy(this.t3Dir).normalize();
+          this.events.emit('axeschange', this.t3);
+          break;
+        case KEYS.RIGHT:
+          this.t3Dir.add(RIGHT);
+          this.t3.copy(this.t3Dir).normalize();
+          this.events.emit('axeschange', this.t3);
+          break;
+        default:
+          this.events.emit('keydown', key);
+      }
     },
     keyup: function(key) {
-      this.pad || this.events.emit('keyup', key);
+      switch (key) {
+        case KEYS.UP:
+          this.t3Dir.subtract(UP);
+          this.t3.copy(this.t3Dir).normalize();
+          this.events.emit('axeschange', this.t3);
+          break;
+        case KEYS.DOWN:
+          this.t3Dir.subtract(DOWN);
+          this.t3.copy(this.t3Dir).normalize();
+          this.events.emit('axeschange', this.t3);
+          break;
+        case KEYS.LEFT:
+          this.t3Dir.subtract(LEFT);
+          this.t3.copy(this.t3Dir).normalize();
+          this.events.emit('axeschange', this.t3);
+          break;
+        case KEYS.RIGHT:
+          this.t3Dir.subtract(RIGHT);
+          this.t3.copy(this.t3Dir).normalize();
+          this.events.emit('axeschange', this.t3);
+          break;
+        default:
+          this.events.emit('keyup', key);
+      }
     },
     paddown: function(idx) {
       // console.log('paddown: %s', KEYS[PAD_MAP[idx]]);
