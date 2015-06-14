@@ -2,6 +2,7 @@ game.module(
   'game.main'
 )
 .require(
+  'plugins.gamepad',
   'plugins.eventemitter',
   'plugins.reactive'
 )
@@ -33,6 +34,13 @@ game.module(
     CANCEL: 'ESC',
     OK: 'ENTER'
   };
+
+  var PAD_MAP = [
+    'X', 'A', 'B', 'Y',
+    'LB', 'RB', 'LT', 'RT',
+    'CANCEL', 'OK',
+    'L3', 'R3'
+  ];
 
 
   // Object
@@ -91,16 +99,16 @@ game.module(
         }
       }
 
-      var whenChangeDir = game.R.merge([
+      // TODO: do not let buttons affect movement
+      var keyChangeDir = game.R.merge([
         whenKeydown.map(keyToDir),
         whenKeyup.map(keyToOpDir)
       ])
-      .filter(function(dir) {
-        return dir !== ZERO;
-      })
-      .map(function(dir) {
-        return this._dir.add(dir);
-      }.bind(this));
+      .scan(function(currDir, dir) {
+        return currDir.add(dir);
+      }, ZERO.clone());
+      var padChangeDir = game.R.fromEvents(game.scene.events, 'axeschange');
+      var whenChangeDir = game.R.merge([keyChangeDir, padChangeDir]);
 
       var whenToRun = whenChangeDir.filter(function(dir) {
         return (dir.x !== 0) || (dir.y !== 0);
@@ -136,34 +144,69 @@ game.module(
     },
 
     changeDir: function(dir) {
-      this.body.velocity.copy(this._dir).normalize().multiply(this.speed);
+      this.body.velocity.copy(dir).normalize().multiply(this.speed);
     },
     run: function() {
       // console.log('run');
-      this.sprite.play('run');
+      (this.sprite.currentAnim !== 'run') && this.sprite.play('run');
       this.sprite.rotation = this.body.velocity.angle();
     },
     stand: function() {
       this.sprite.play('idle');
     },
     shoot: function() {
-      // console.log('shoot');
+      console.log('shoot');
     }
   });
 
   game.createScene('Main', {
   	backgroundColor: '#000',
+    pad: null,
+    t3: null, // t3 axis
     init: function() {
       this.world = new game.World(0, 0);
       this.events = new game.EventEmitter();
 
       new Cog(120, 120, this.stage);
+
+      this.t3 = new game.Vector();
+      game.gamepad.onConnect(function(pad) {
+        this.pad = pad;
+
+        console.log('gamepad connected');
+
+        pad.onButtonDown(this.paddown.bind(this));
+        pad.onButtonUp(this.padup.bind(this));
+        pad.onAxesChange(this.axeschange.bind(this));
+      }.bind(this));
     },
+
     keydown: function(key) {
-      this.events.emit('keydown', key);
+      this.pad || this.events.emit('keydown', key);
     },
     keyup: function(key) {
-      this.events.emit('keyup', key);
+      this.pad || this.events.emit('keyup', key);
+    },
+    paddown: function(idx) {
+      // console.log('paddown: %s', KEYS[PAD_MAP[idx]]);
+      this.events.emit('keydown', KEYS[PAD_MAP[idx]]);
+    },
+    padup: function(idx) {
+      // console.log('padup: %s', KEYS[PAD_MAP[idx]]);
+      this.events.emit('keyup', KEYS[PAD_MAP[idx]]);
+    },
+    axeschange: function(idx, value) {
+      // console.log('axis[%d]: %s', idx, value.toFixed(2));
+      switch(idx) {
+        case 0:
+          this.t3.x = value;
+          break;
+        case 1:
+          this.t3.y = value;
+          break;
+      }
+
+      this.events.emit('axeschange', this.t3);
     }
   });
 
