@@ -1,10 +1,10 @@
 pandaConfig = {
   name: 'my-gta',
-  version: '0.0.1',
+  version: '0.0.2',
 
   system: {
-    width: 480,
-    height: 360,
+    width: 240,
+    height: 160,
     center: true,
     scale: true,
     resize: false
