@@ -83,7 +83,7 @@ game.module(
       var whenToShoot = whenKeydown.filter(function(key) {
         return key === KEYS.A;
       })
-      .throttle(this.shootBetween);
+      .throttle(this.shootBetween, { trailing: false });
 
       // Handlers
       var changeDir = this.changeDir.bind(this);
