@@ -66,6 +66,20 @@ game.createClass('Graphics', 'Container', {
     },
 
     /**
+        @method drawCircle
+        @param {Number} x
+        @param {Number} y
+        @param {Number} radius
+        @chainable
+    **/
+    drawCircle: function(x, y, radius) {
+        radius *= game.scale;
+        var shape = new game.Circle(radius, x, y);
+        this._drawShape(shape);
+        return this;
+    },
+
+    /**
         @method drawRect
         @param {Number} x
         @param {Number} y
@@ -74,6 +88,7 @@ game.createClass('Graphics', 'Container', {
         @chainable
     **/
     drawRect: function(x, y, width, height) {
+        height = height || width;
         width *= game.scale;
         height *= game.scale;
         var shape = new game.Rectangle(width, height, x, y);
@@ -106,29 +121,47 @@ game.createClass('Graphics', 'Container', {
     },
 
     _getBounds: function() {
-        if (this._worldTransform.tx === null) this.updateParentTransform();
+        if (this._worldTransform.tx === null) this._updateParentTransform();
 
-        var minX = this._worldTransform.tx;
-        var minY = this._worldTransform.ty;
-        var maxX = this._worldTransform.tx;
-        var maxY = this._worldTransform.ty;
+        var wt = this._worldTransform;
+        var a = wt.a;
+        var b = wt.b;
+        var c = wt.c;
+        var d = wt.d;
+        var tx = wt.tx;
+        var ty = wt.ty;
+        var width = 0;
+        var height = 0;
 
         for (var i = 0; i < this.shapes.length; i++) {
             var data = this.shapes[i];
+            var maxX = data.shape.x;
+            var maxY = data.shape.y;
 
-            var x = this._worldTransform.tx + data.shape.x;
-            var y = this._worldTransform.ty + data.shape.y;
-
-            if (data.shape instanceof game.Rectangle) {
-                var width = x + data.shape.width;
-                var height = y + data.shape.height;
+            if (data.shape.radius) {
+                maxX += data.shape.radius / game.scale;
+                maxY += data.shape.radius / game.scale;
+            }
+            else {
+                maxX += data.shape.width / game.scale;
+                maxY += data.shape.height / game.scale;
             }
 
-            if (x < minX) minX = x;
-            if (y < minY) minY = y;
-            if (width > maxX) maxX = width;
-            if (height > maxY) maxY = height;
+            width = Math.max(width, maxX);
+            height = Math.max(height, maxY);
         }
+
+        var x2 = a * width + tx;
+        var y2 = b * width + ty;
+        var x3 = a * width + c * height + tx;
+        var y3 = d * height + b * width + ty;
+        var x4 = c * height + tx;
+        var y4 = d * height + ty;
+
+        var minX = Math.min(tx, x2, x3, x4);
+        var minY = Math.min(ty, y2, y3, y4);
+        var maxX = Math.max(tx, x2, x3, x4);
+        var maxY = Math.max(ty, y2, y3, y4);
 
         this._worldBounds.x = minX;
         this._worldBounds.y = minY;
@@ -137,40 +170,15 @@ game.createClass('Graphics', 'Container', {
         return this._worldBounds;
     },
 
-    _renderWebGL: function() {
-        // TODO
-    },
-
     _renderCanvas: function(context) {
-        var tx = this._worldTransform.tx * game.scale;
-        var ty = this._worldTransform.ty * game.scale;
+        var wt = this._worldTransform;
+        var tx = wt.tx * game.scale;
+        var ty = wt.ty * game.scale;
 
-        context.setTransform(
-            this._worldTransform.a,
-            this._worldTransform.b,
-            this._worldTransform.c,
-            this._worldTransform.d,
-            tx,
-            ty);
+        context.setTransform(wt.a, wt.b, wt.c, wt.d, tx, ty);
 
         for (var i = 0; i < this.shapes.length; i++) {
             this.shapes[i]._render(context, this._worldAlpha);
-        }
-        
-        this.super(context);
-    }
-});
-
-game.defineProperties('Graphics', {
-    width: {
-        get: function() {
-            return this.scale.x * this._getBounds().width / game.scale;
-        }
-    },
-
-    height: {
-        get: function() {
-            return this.scale.y * this._getBounds().height / game.scale;
         }
     }
 });
@@ -183,10 +191,35 @@ game.defineProperties('Graphics', {
     @param {Number} lineAlpha
     @param {String} fillColor
     @param {Number} fillAlpha
-    @param {Rectangle} shape
+    @param {Rectangle|Circle} shape
 **/
 game.createClass('GraphicsData', {
-    init: function(lineWidth, lineColor, lineAlpha, fillColor, fillAlpha, shape) {
+    /**
+        @property {Number} fillAlpha
+    **/
+    fillAlpha: 1,
+    /**
+        @property {String} fillColor
+    **/
+    fillColor: '',
+    /**
+        @property {Number} lineAlpha
+    **/
+    lineAlpha: 0,
+    /**
+        @property {String} lineColor
+    **/
+    lineColor: '',
+    /**
+        @property {Number} lineWidth
+    **/
+    lineWidth: 0,
+    /**
+        @property {Rectangle|Circle} shape
+    **/
+    shape: null,
+
+    staticInit: function(lineWidth, lineColor, lineAlpha, fillColor, fillAlpha, shape) {
         this.lineWidth = lineWidth;
         this.lineColor = lineColor;
         this.lineAlpha = lineAlpha;
@@ -197,37 +230,29 @@ game.createClass('GraphicsData', {
 
     /**
         @method _render
-        @param {CanvasRenderingContext2D|WebGLRenderingContext} context
-        @param {Number} alpha
-        @private
-    **/
-    _render: function(context, alpha) {
-        if (game.renderer.webGL) this._renderWebGL(context, alpha);
-        else this._renderCanvas(context, alpha);
-    },
-
-    /**
-        @method _renderCanvas
         @param {CanvasRenderingContext2D} context
         @param {Number} alpha
         @private
     **/
-    _renderCanvas: function(context, alpha) {
+    _render: function(context, alpha) {
         context.globalAlpha = this.fillAlpha * alpha;
         context.fillStyle = this.fillColor;
-        if (this.shape instanceof game.Rectangle) {
-            context.fillRect(this.shape.x, this.shape.y, this.shape.width, this.shape.height);
-        }
-    },
+        context.strokeStyle = this.lineColor;
+        context.lineWidth = this.lineWidth * game.scale;
+        context.beginPath();
 
-    /**
-        @method _renderWebGL
-        @param {WebGLRenderingContext} context
-        @param {Number} alpha
-        @private
-    **/
-    _renderWebGL: function(context, alpha) {
-        // TODO
+        var x = this.shape.x * game.scale;
+        var y = this.shape.y * game.scale;
+
+        if (this.shape.width) {
+            context.rect(x, y, this.shape.width, this.shape.height);
+        }
+        else if (this.shape.radius) {
+            context.arc(x, y, this.shape.radius, 0, Math.PI * 2);
+        }
+
+        if (this.fillColor && this.fillAlpha) context.fill();
+        if (this.lineWidth) context.stroke();
     }
 });
 

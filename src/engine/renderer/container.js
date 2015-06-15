@@ -14,14 +14,14 @@ game.module(
 **/
 game.createClass('Container', {
     /**
-        @property {Vector} anchor
-    **/
-    anchor: null,
-    /**
         @property {Number} alpha
         @default 1
     **/
     alpha: 1,
+    /**
+        @property {Vector} anchor
+    **/
+    anchor: null,
     /**
         @property {Array} children
     **/
@@ -180,8 +180,8 @@ game.createClass('Container', {
         if (!container) return;
 
         if (container === this.stage) {
-            var x = game.system.width / 2;
-            var y = game.system.height / 2;
+            var x = game.width / 2;
+            var y = game.height / 2;
         }
         else {
             var bounds = container._getBounds();
@@ -322,18 +322,6 @@ game.createClass('Container', {
     },
 
     /**
-        @method _updateChildTransform
-        @private
-    **/
-    _updateChildTransform: function() {
-        for (var i = this.children.length - 1; i >= 0; i--) {
-            var child = this.children[i];
-            if (!child.visible || child.alpha <= 0) continue;
-            child.updateTransform();
-        }
-    },
-
-    /**
         @method updateTransform
     **/
     updateTransform: function() {
@@ -376,15 +364,6 @@ game.createClass('Container', {
     },
 
     /**
-        @method _updateParentTransform
-        @private
-    **/
-    _updateParentTransform: function() {
-        if (this.parent) this.parent._updateParentTransform();
-        else this.updateTransform();
-    },
-
-    /**
         @method _destroyCachedSprite
         @private
     **/
@@ -406,7 +385,8 @@ game.createClass('Container', {
 
         this._worldTransform.reset();
         this._updateChildTransform();
-
+        
+        this._renderCanvas(context);
         this._renderChildren(context);
 
         var texture = game.Texture.fromCanvas(canvas);
@@ -433,8 +413,8 @@ game.createClass('Container', {
         if (this._cachedSprite) {
             this._worldBounds.x = this._worldTransform.tx + this._cachedSprite.position.x;
             this._worldBounds.y = this._worldTransform.ty + this._cachedSprite.position.y;
-            this._worldBounds.width = this._cachedSprite.texture.width * this._worldTransform.a / game.scale;
-            this._worldBounds.height = this._cachedSprite.texture.height * this._worldTransform.d / game.scale;
+            this._worldBounds.width = this._cachedSprite.texture.width * this._worldTransform.a;
+            this._worldBounds.height = this._cachedSprite.texture.height * this._worldTransform.d;
             return this._worldBounds;
         }
 
@@ -477,15 +457,13 @@ game.createClass('Container', {
 
     /**
         @method _render
-        @param {CanvasRenderingContext2D|WebGLRenderingContext} context
+        @param {CanvasRenderingContext2D} context
         @private
     **/
     _render: function(context) {
-        if (this._cachedSprite) return this._renderCachedSprite(context);
+        this.updateTransform();
 
-        if (game.renderer.webGL && context === game.renderer.context) {
-            this._renderWebGL();
-        }
+        if (this._cachedSprite) return this._renderCachedSprite(context);
         else this._renderCanvas(context);
 
         this._renderChildren(context);
@@ -493,29 +471,26 @@ game.createClass('Container', {
 
     /**
         @method _renderCachedSprite
-        @param {CanvasRenderingContext2D|WebGLRenderingContext} context
+        @param {CanvasRenderingContext2D} context
         @private
     **/
     _renderCachedSprite: function(context) {
-        if (game.renderer.webGL) {
-            game.renderer._spriteBatch.render(this._cachedSprite, this._worldTransform);
-        }
-        else {
-            context.globalAlpha = this._worldAlpha;
+        context.globalAlpha = this._worldAlpha;
 
-            var t = this._cachedSprite.texture;
-            var wt = this._worldTransform;
-            var tx = wt.tx * game.scale;
-            var ty = wt.ty * game.scale;
-            
-            if (game.Renderer.roundPixels) {
-                tx = tx | 0;
-                ty = ty | 0;
-            }
-
-            context.setTransform(wt.a, wt.b, wt.c, wt.d, tx, ty);
-            context.drawImage(t.baseTexture.source, t.position.x, t.position.y, t.width, t.height, 0, 0, t.width, t.height);
+        var t = this._cachedSprite.texture;
+        var wt = this._worldTransform;
+        var tx = wt.tx * game.scale;
+        var ty = wt.ty * game.scale;
+        var width = t.width * game.scale;
+        var height = t.height * game.scale;
+        
+        if (game.Renderer.roundPixels) {
+            tx = tx | 0;
+            ty = ty | 0;
         }
+
+        context.setTransform(wt.a, wt.b, wt.c, wt.d, tx, ty);
+        context.drawImage(t.baseTexture.source, t.position.x, t.position.y, width, height, 0, 0, width, height);
     },
 
     /**
@@ -523,11 +498,12 @@ game.createClass('Container', {
         @param {CanvasRenderingContext2D} context
         @private
     **/
-    _renderCanvas: function(context) {},
+    _renderCanvas: function(context) {
+    },
 
     /**
         @method _renderChildren
-        @param {CanvasRenderingContext2D|WebGLRenderingContext} context
+        @param {CanvasRenderingContext2D} context
         @private
     **/
     _renderChildren: function(context) {
@@ -537,13 +513,6 @@ game.createClass('Container', {
             child._render(context);
         }
     },
-
-    /**
-        @method _renderWebGL
-        @param {WebGLRenderingContext} context
-        @private
-    **/
-    _renderWebGL: function(context) {},
 
     /**
         @method _setStageReference
@@ -558,11 +527,33 @@ game.createClass('Container', {
             var child = this.children[i];
             child._setStageReference(stage);
         }
+    },
+
+    /**
+        @method _updateChildTransform
+        @private
+    **/
+    _updateChildTransform: function() {
+        for (var i = this.children.length - 1; i >= 0; i--) {
+            var child = this.children[i];
+            if (!child.visible || child.alpha <= 0) continue;
+            child.updateTransform();
+        }
+    },
+
+    /**
+        @method _updateParentTransform
+        @private
+    **/
+    _updateParentTransform: function() {
+        if (this.parent) this.parent._updateParentTransform();
+        else this.updateTransform();
     }
 });
 
 game.defineProperties('Container', {
     /**
+        Cache container content as bitmap.
         @property {Boolean} cacheAsBitmap
         @default false
     **/

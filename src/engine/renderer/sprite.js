@@ -37,8 +37,8 @@ game.createClass('Sprite', 'Container', {
     _getBounds: function() {
         if (this._worldTransform.tx === null) this._updateParentTransform();
 
-        var width = this.texture.width / game.scale;
-        var height = this.texture.height / game.scale;
+        var width = this.texture.width;
+        var height = this.texture.height;
         var wt = this._worldTransform;
         var a = wt.a;
         var b = wt.b;
@@ -77,25 +77,6 @@ game.createClass('Sprite', 'Container', {
         return this._worldBounds;
     },
 
-    _render: function(context) {
-        if (!this.texture) return;
-        if (!this.texture.width && this.texture.baseTexture.width) {
-            this.texture.width = this.texture.baseTexture.width;
-        }
-        if (!this.texture.height && this.texture.baseTexture.height) {
-            this.texture.height = this.texture.baseTexture.height;
-        }
-        if (!this.texture.width || !this.texture.height) {
-            return this._renderChildren(context);
-        }
-
-        this.super(context);
-    },
-
-    _renderWebGL: function() {
-        game.renderer._spriteBatch.render(this);
-    },
-
     /**
         @method _renderCanvas
         @param {CanvasRenderingContext2D} context
@@ -105,8 +86,18 @@ game.createClass('Sprite', 'Container', {
         @private
     **/
     _renderCanvas: function(context, transform, rect, offset) {
+        if (!this.texture) return;
         if (!this.texture.baseTexture.loaded) return;
 
+        if (!this.texture.width && this.texture.baseTexture.width) {
+            this.texture.width = this.texture.baseTexture.width;
+        }
+        if (!this.texture.height && this.texture.baseTexture.height) {
+            this.texture.height = this.texture.baseTexture.height;
+        }
+        
+        if (!this.texture.width || !this.texture.height) return;
+        
         context.globalAlpha = this._worldAlpha;
 
         var t = this.texture;
@@ -122,8 +113,8 @@ game.createClass('Sprite', 'Container', {
         tx *= game.scale;
         ty *= game.scale;
 
-        var x = t.position.x;
-        var y = t.position.y;
+        var x = t.position.x * game.scale;
+        var y = t.position.y * game.scale;
         var width = t.width * game.scale;
         var height = t.height * game.scale;
 
