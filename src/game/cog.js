@@ -1,6 +1,9 @@
 game.module(
   'game.cog'
 )
+.require(
+  'game.global'
+)
 .body(function() { 'use strict';
 
   // Assets
@@ -14,6 +17,8 @@ game.module(
   var DOWN = game.Vector.DOWN;
   var RIGHT = game.Vector.RIGHT;
   var LEFT = game.Vector.LEFT;
+
+  var KEY_MAP = game.G.KEY_MAP;
 
 
   // Object
