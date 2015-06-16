@@ -45,6 +45,9 @@ game.module(
         pad.onAxesChange(this.axeschange.bind(this));
       }.bind(this));
     },
+    exit: function() {
+      this.events.emit('exit');
+    },
     keydown: function(key) {
       switch (key) {
         case KEY_MAP.UP:
