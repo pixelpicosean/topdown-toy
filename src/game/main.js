@@ -13,6 +13,7 @@ game.module(
 
     init: function() {
       this.addTimer(10, function() {
+        // game.system.setScene('Playground');
         game.system.setScene('Menu');
       });
     }
