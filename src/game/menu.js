@@ -23,6 +23,19 @@ game.module(
   var RIGHT = new game.Vector(1, 0);
   var LEFT = new game.Vector(-1, 0);
 
+  var KEY_MAP = game.G.KEY_MAP;
+
+
+  // Data
+  var menuData = {
+    selects: [
+      { label: 'Continue', msg: 'continue' },
+      { label: 'Start', msg: 'start' },
+      { label: 'Options', msg: 'options' },
+      { label: 'Exit', msg: 'exitGame' }
+    ]
+  };
+
 
   // Object
 
@@ -30,45 +43,25 @@ game.module(
   game.createClass('Menu', 'BaseScene', {
     backgroundColor: '#000',
     init: function() {
+      var self = this;
+
       var border = new game.Graphics().addTo(this.stage);
       border.beginFill('#555');
       border.drawRect(-60, -12, 120, 24);
 
-      var items = [];
-      var baseY = 40;
+      var baseY = 30;
+      var items = menuData.selects.map(function(item, idx) {
+        var text = new game.Text(item.label, {
+          position: { y: baseY + idx * 24 },
+          anchor: { x: 0.5 },
+          font: 'KenPixel'
+        }).addTo(self.stage);
 
-      items.push(
-        new game.Text('Continue', {
-          position: { x: 70, y: baseY + items.length * 24 },
-          anchor: { x: 0.5 },
-          align: 'center',
-          font: 'KenPixel'
-        }).addTo(this.stage)
-      );
-      items.push(
-        new game.Text('Start', {
-          position: { x: 90, y: baseY + items.length * 24 },
-          anchor: { x: 0.5 },
-          align: 'center',
-          font: 'KenPixel'
-        }).addTo(this.stage)
-      );
-      items.push(
-        new game.Text('Options', {
-          position: { x: 76, y: baseY + items.length * 24 },
-          anchor: { x: 0.5 },
-          align: 'center',
-          font: 'KenPixel'
-        }).addTo(this.stage)
-      );
-      items.push(
-        new game.Text('Exit', {
-          position: { x: 100, y: baseY + items.length * 24 },
-          anchor: { x: 0.5 },
-          align: 'center',
-          font: 'KenPixel'
-        }).addTo(this.stage)
-      );
+        // Align to the center
+        text.position.x = game.width * 0.5 - text.width * 0.5;
+
+        return text;
+      });
 
       // Streams
       var whenUpOrDown = game.R.fromEvents(this.events, 'axeschange')
@@ -100,18 +93,58 @@ game.module(
         }, 0)
         .skipDuplicates();
 
+      var whenPressedA = game.R.fromEvents(this.events, 'keydown')
+        .filter(function(key) {
+          return key === KEY_MAP.A;
+        });
+
+      var whenItemActivated = whenCursorMoved.sampledBy(whenPressedA);
+
       // Handlers
       function onCursorMoved(idx) {
         border.position.copy(items[idx].position)
           .add(items[idx].width * 0.5, items[idx].height * 0.5 + 4);
       }
 
+      function onItemActivated(idx) {
+        self.events.emit(menuData.selects[idx].msg);
+      }
+
+      function continueGame() {
+        console.log('continue from last time');
+        game.system.setScene('Playground');
+      }
+
+      function startNewGame() {
+        console.log('start new game');
+        game.system.setScene('Playground');
+      }
+
+      function openOptions() {
+        console.log('open options');
+      }
+
+      function exitGame() {
+        console.log('exit from last time');
+      }
+
       // Plug stream handlers
       whenCursorMoved.onValue(onCursorMoved);
+      whenItemActivated.onValue(onItemActivated);
+      this.events.once('continue', continueGame);
+      this.events.once('start', startNewGame);
+      this.events.once('options', openOptions);
+      this.events.once('exitGame', exitGame);
 
       // Cleanup things when leave the scene
       this.events.once('exit', function() {
         whenCursorMoved.offValue(onCursorMoved);
+        whenItemActivated.offValue(onItemActivated);
+
+        self.events.off('continue', continueGame);
+        self.events.off('start', startNewGame);
+        self.events.off('options', openOptions);
+        self.events.off('exitGame', exitGame);
       });
     }
   });
