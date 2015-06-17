@@ -9,6 +9,7 @@ game.module(
     'engine.renderer.container',
     'engine.renderer.graphics',
     'engine.renderer.sprite',
+    'engine.renderer.spritebatch',
     'engine.renderer.spritesheet',
     'engine.renderer.text',
     'engine.renderer.texture',
@@ -18,6 +19,9 @@ game.module(
 
 /**
     @class Renderer
+    @constructor
+    @param {Number} width
+    @param {Number} height
 **/
 game.createClass('Renderer', {
     /**
@@ -34,7 +38,7 @@ game.createClass('Renderer', {
     **/
     _smoothProperty: null,
 
-    init: function() {
+    init: function(width, height) {
         if (!game.device.cocoonCanvasPlus) {
             this.canvas = document.getElementById(game.System.canvasId);
         }
@@ -42,9 +46,9 @@ game.createClass('Renderer', {
         if (!this.canvas) {
             this.canvas = document.createElement('canvas');
             this.canvas.id = game.System.canvasId;
-            document.body.style.margin = 0;
+            this.canvas.style.display = 'block';
             document.body.appendChild(this.canvas);
-            this._show();
+            if (!game.System.center) document.body.style.margin = 0;
         }
 
         this.context = this.canvas.getContext('2d');
@@ -55,7 +59,7 @@ game.createClass('Renderer', {
         else if ('oImageSmoothingEnabled' in this.context) this._smoothProperty = 'oImageSmoothingEnabled';
         else if ('msImageSmoothingEnabled' in this.context) this._smoothProperty = 'msImageSmoothingEnabled';
         
-        this._resize(game.system.canvasWidth, game.system.canvasHeight);
+        this._resize(width, height);
     },
 
     /**
@@ -104,9 +108,7 @@ game.createClass('Renderer', {
     _render: function(container) {
         this.context.setTransform(1, 0, 0, 1, 0, 0);
         this.context.globalAlpha = 1;
-        
         if (game.Renderer.clearBeforeRender) this._clear();
-
         container._render(this.context);
     },
 
