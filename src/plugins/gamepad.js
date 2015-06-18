@@ -96,6 +96,12 @@ function applyDeadzoneMaximize(value, deadzone, maximizeThreshold) {
 
 if (navigator.getGamepads || navigator.webkitGetGamepads) {
     game.Scene.inject({
+        staticInit: function() {
+            this.super();
+
+            // Cleanup gamepad instances
+            game.gamepads = {};
+        },
         _update: function() {
             var gamepads = navigator.getGamepads ? navigator.getGamepads() : (navigator.webkitGetGamepads ? navigator.webkitGetGamepads : []);
             for (var i = 0; i < gamepads.length; i++) {
