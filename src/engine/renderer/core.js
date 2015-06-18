@@ -7,9 +7,9 @@ game.module(
 .require(
     'engine.renderer.animation',
     'engine.renderer.container',
+    'engine.renderer.fastcontainer',
     'engine.renderer.graphics',
     'engine.renderer.sprite',
-    'engine.renderer.spritebatch',
     'engine.renderer.spritesheet',
     'engine.renderer.text',
     'engine.renderer.texture',
@@ -50,6 +50,8 @@ game.createClass('Renderer', {
             document.body.appendChild(this.canvas);
             if (!game.System.center) document.body.style.margin = 0;
         }
+
+        game._normalizeVendorAttribute(this.canvas, 'requestFullScreen');
 
         this.context = this.canvas.getContext('2d');
 
@@ -108,6 +110,7 @@ game.createClass('Renderer', {
     _render: function(container) {
         this.context.setTransform(1, 0, 0, 1, 0, 0);
         this.context.globalAlpha = 1;
+        this.context.globalCompositeOperation = 'source-over';
         if (game.Renderer.clearBeforeRender) this._clear();
         container._render(this.context);
     },

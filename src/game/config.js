@@ -1,4 +1,4 @@
-pandaConfig = {
+game.config = {
   name: 'my-gta',
   version: '0.0.2',
 

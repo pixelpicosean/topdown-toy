@@ -4,7 +4,7 @@ Small GTA like topdown shooting game for practice.
 
 ## Engine
 
-Based on `develop` branch "2d468c9" commit.
+Based on `develop` branch "9969cbc" commit.
 
 ## Info
 
