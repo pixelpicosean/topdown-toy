@@ -5006,41 +5006,6 @@ game.module(
 ]);
 
   /**
-   * Create a observable property.
-   * @param  {Object} target Whose property is going to be defined.
-   * @param  {String} key    Key of the property to define
-   * @return {game.R.Property} The observable property object.
-   */
-  game.R.defineProperty = function(target, key) {
-    var value = target[key];
-    var emitter;
-
-    // Create a Kefir property
-    var prop = game.R.stream(function(e) {
-      emitter = e;
-    }).toProperty(function() {
-      return value;
-    });
-
-    // Save the property to target.prop
-    target.prop || (target.prop = {});
-    target.prop[key] = prop;
-
-    // Define the REAL property for target
-    Object.defineProperty(target, key, {
-      set: function(newValue) {
-        value = newValue;
-        emitter && emitter.emit(value);
-      },
-      get: function() {
-        return value;
-      }
-    });
-
-    return prop;
-  }
-
-  /**
    * Create an reactive variable.
    *
    * Example:
