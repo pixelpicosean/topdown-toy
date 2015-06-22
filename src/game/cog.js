@@ -20,6 +20,8 @@ game.module(
 
   var KEY_MAP = game.G.KEY_MAP;
 
+  var GROUPS = game.G.GROUPS;
+
 
   // Object
   game.createClass('Cog', {
@@ -41,7 +43,9 @@ game.module(
 
       this.body = new game.Body({
         position: this.sprite.position,
-        shape: new game.Rectangle(16, 16)
+        shape: new game.Rectangle(16, 16),
+        collisionGroup: GROUPS.FRIEND,
+        collideAgainst: [GROUPS.BLOCK]
       }).addTo(game.scene.world);
 
       // Streams

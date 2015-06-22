@@ -28,7 +28,14 @@ game.module(
       'LB', 'RB', 'LT', 'RT',
       'CANCEL', 'OK',
       'L3', 'R3'
-    ]
+    ],
+
+    GROUPS: {
+      BLOCK: 1,
+
+      FRIEND: 10,
+      FOE: 100
+    }
   };
 
 
