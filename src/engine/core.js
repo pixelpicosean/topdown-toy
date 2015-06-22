@@ -384,7 +384,7 @@ var game = {
         for (i in obj) {
             keys.push(i);
         }
-        
+
         keys.sort(compare);
         for (i = 0; i < keys.length; i++) {
             result[keys[i]] = obj[keys[i]];
@@ -433,7 +433,7 @@ var game = {
         if (this.modules[name] && this.modules[name].body) throw 'Module ' + name + ' is already defined';
 
         this._current = { name: name, requires: [], loaded: false, classes: [] };
-        
+
         if (name.indexOf('game.') === 0) {
             this._gameModuleDefined = true;
             this._current.requires.push('engine.core');
@@ -649,7 +649,7 @@ var game = {
         this.device.android2 = /android 2/i.test(navigator.userAgent);
         var androidVer = navigator.userAgent.match(/Android.*AppleWebKit\/([\d.]+)/);
         this.device.androidStock = !!(androidVer && androidVer[1] < 537);
-        
+
         // Internet Explorer
         this.device.ie9 = /MSIE 9/i.test(navigator.userAgent);
         this.device.ie10 = /MSIE 10/i.test(navigator.userAgent);
@@ -1023,9 +1023,9 @@ game.Class.extend = function(prop) {
             @param {Array} arguments
         **/
         if (this.init && !skipInit) this.init.apply(this, arguments);
-        if (game.scene && typeof this.update === 'function' && this !== game.scene) {
-            game.scene.addObject(this);
-        }
+        // if (game.scene && typeof this.update === 'function' && this !== game.scene) {
+        //     game.scene.addObject(this);
+        // }
         return this;
     }
 
