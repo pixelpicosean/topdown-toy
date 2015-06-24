@@ -5,6 +5,7 @@ game.module(
     'engine.timer'
 )
 .body(function() {
+'use strict';
 
 /**
     @class Timer
@@ -32,12 +33,12 @@ game.createClass('Timer', {
         @private
     **/
     _pauseTime: 0,
-    
+
     init: function(ms) {
         this._last = game.Timer.time;
         this.set(ms);
     },
-    
+
     /**
         Set time for timer.
         @method set
@@ -48,7 +49,7 @@ game.createClass('Timer', {
         this.target = ms;
         this.reset();
     },
-    
+
     /**
         Reset timer.
         @method reset
@@ -57,7 +58,7 @@ game.createClass('Timer', {
         this.base = game.Timer.time;
         this._pauseTime = 0;
     },
-    
+
     /**
         Get time since last delta.
         @method delta
@@ -68,7 +69,7 @@ game.createClass('Timer', {
         this._last = game.Timer.time;
         return this._pauseTime ? 0 : delta;
     },
-    
+
     /**
         Get time since start.
         @method time

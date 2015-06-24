@@ -5,6 +5,7 @@ game.module(
     'engine.tween'
 )
 .body(function() {
+'use strict';
 
 /**
     @class Tween
@@ -215,7 +216,7 @@ game.createClass('Tween', {
         this.onCompleteCallback = callback;
         return this;
     },
-    
+
     /**
         Set onRepeat callback for tween.
         @method onRepeat
@@ -363,17 +364,17 @@ game.createClass('Tween', {
         if (this._shouldRemove) return false;
         if (this.paused) return true;
 
-        this.currentTime += game.delta * 1000;
+        this.currentTime += game.system.delta * 1000;
 
         if (this.currentTime < this._startTime) return true;
-        
+
         if (this._onStartCallbackFired === false) {
             if (this.onStartCallback !== null) {
                 this.onStartCallback.call(this.object);
             }
             this._onStartCallbackFired = true;
         }
-        
+
         var elapsed = (this.currentTime - this._startTime) / this.duration;
         elapsed = elapsed > 1 ? 1 : elapsed;
         var value = this.easingFunction(elapsed);
@@ -635,7 +636,7 @@ game.addAttributes('Tween', {
                     return 7.5625 * (k -= (2.625 / 2.75)) * k + 0.984375;
                 }
             },
-            
+
             InOut: function(k) {
                 if (k < 0.5) return game.Tween.Easing.Bounce.In(k * 2) * 0.5;
                 return game.Tween.Easing.Bounce.Out(k * 2 - 1) * 0.5 + 0.5;
@@ -805,7 +806,7 @@ game.createClass('TweenGroup', {
         for (var i = 0; i < this.tweens.length; i++) {
             this.tweens[i].stop(endTween);
         }
-        
+
         if (!this._complete && doComplete) this._tweenComplete();
         this._complete = true;
     },

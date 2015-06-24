@@ -223,7 +223,7 @@ game.createClass('Audio', {
         this._resume(id);
         this.playingSounds.push(id);
         this.pausedSounds.splice(index, 1);
-        
+
         return true;
     },
 
@@ -282,14 +282,14 @@ game.createClass('Audio', {
     **/
     playMusic: function(name, loop) {
         var volume = this.musicMuted ? 0 : this.musicVolume;
-        
+
         if (typeof loop === 'undefined') loop = true;
 
         if (this.currentMusic) this._stop(this.currentMusic);
-        
+
         this.currentMusic = this._play(name, !!loop, volume);
         this.currentMusicName = name;
-        
+
         return this.currentMusic;
     },
 
@@ -473,7 +473,7 @@ game.createClass('Audio', {
             this._error.bind(this, path)
         );
     },
-    
+
     /**
         @method _load
         @param {String} path
@@ -483,8 +483,9 @@ game.createClass('Audio', {
     _load: function(path, callback) {
         var ext = path.split('?').shift().split('.').pop();
         if (this.formats.indexOf(ext) === -1) ext = this.formats[0];
-        
-        var realPath = path.replace(/[^\.]+$/, ext + game._nocache);
+
+        // var realPath = path.replace(/[^\.]+$/, ext + game._nocache);
+        var realPath = path.replace(/[^\.]+$/, ext);
 
         if (this.context) {
             var request = new XMLHttpRequest();

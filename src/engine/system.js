@@ -1,155 +1,239 @@
 /**
     @module system
+    @namespace game
 **/
 game.module(
     'engine.system'
 )
 .body(function() {
+'use strict';
 
 /**
     @class System
+    @extends game.Class
 **/
 game.createClass('System', {
     /**
-        Canvas height.
-        @property {Number} canvasHeight
+        Name of current scene.
+        @property {String} currentSceneName
     **/
-    canvasHeight: 0,
+    currentSceneName: null,
     /**
-        Canvas width.
-        @property {Number} canvasWidth
+        Width of the game screen.
+        @property {Number} width
     **/
-    canvasWidth: 0,
-    /**
-        Current delta time in seconds.
-        @property {Number} delta
-    **/
-    delta: 0,
+    width: null,
     /**
         Height of the game screen.
         @property {Number} height
     **/
-    height: 0,
+    height: null,
     /**
-        Is engine in HiRes mode.
-        @property {Boolean} hires
+        Current delta-time.
+        @property {Number} delta
     **/
-    hires: false,
+    delta: 0,
     /**
-        Original height.
-        @property {Number} originalHeight
+        Main game timer.
+        @property {Timer} timer
     **/
-    originalHeight: 0,
+    timer: null,
     /**
-        Original width.
-        @property {Number} originalWidth
+        Canvas element.
+        @property {HTMLCanvasElement} canvas
     **/
-    originalWidth: 0,
+    canvas: null,
     /**
         Is engine paused.
         @property {Boolean} paused
     **/
     paused: false,
     /**
+        Is engine in HiRes mode.
+        @property {Boolean} hires
+    **/
+    hires: false,
+    /**
         Is engine in Retina mode.
         @property {Boolean} retina
     **/
     retina: false,
     /**
-        Name of current scene.
-        @property {String} sceneName
+        Is mobile rotate screen visible.
+        @property {Boolean} rotateScreenVisible
     **/
-    sceneName: null,
+    rotateScreenVisible: false,
     /**
-        Width of the game screen.
-        @property {Number} width
+        Current id of the game loop.
+        @property {Number} gameLoopId
     **/
-    width: 0,
+    gameLoopId: 0,
     /**
-        @property {Scene} _newSceneClass
-        @private
+        Is WebGL enabled.
+        @property {Boolean} webGL
     **/
-    _newSceneClass: null,
+    webGL: false,
     /**
-        @property {Boolean} _pausedOnHide
-        @private
+        Original width.
+        @property {Number} originalWidth
     **/
-    _pausedOnHide: false,
+    originalWidth: null,
     /**
-        @property {Boolean} _rotateScreenVisible
-        @default false
-        @private
+        Original height.
+        @property {Number} originalHeight
     **/
-    _rotateScreenVisible: false,
-    /**
-        @property {Number} _runLoopId
-        @private
-    **/
-    _runLoopId: 0,
-    /**
-        @property {Boolean} _running
-        @private
-    **/
-    _running: false,
+    originalHeight: null,
+    newSceneClass: null,
+    running: false,
 
     init: function() {
-        game.width = this.width = this.originalWidth = game.System.width;
-        game.height = this.height = this.originalHeight = game.System.height;
+        var width = game.System.width;
+        var height = game.System.height;
+        if (width === 'window') width = window.innerWidth;
+        if (height === 'window') height = window.innerHeight;
+        this.originalWidth = width;
+        this.originalHeight = height;
 
-        for (var i = 2; i <= game.System.hires; i += 2) {
-            var ratio = game.System.hiresRatio * (i / 2);
-            if (window.innerWidth >= this.originalWidth * ratio && window.innerHeight >= this.originalHeight * ratio) {
+        for (var i = 2; i <= game.System.hires; i *= 2) {
+            if (window.innerWidth >= width * i && window.innerHeight >= height * i) {
                 this.hires = true;
                 game.scale = i;
             }
         }
-
-        if (game.System.retina && game.device.pixelRatio === 2 && game.scale < game.System.hires) {
-            this.retina = true;
-            game.scale *= 2;
+        if (this.hires) {
+            width *= game.scale;
+            height *= game.scale;
         }
-
-        this.canvasWidth = this.originalWidth * game.scale;
-        this.canvasHeight = this.originalHeight * game.scale;
-
-        var visibilityChange;
-        if (typeof document.hidden !== 'undefined') {
-            visibilityChange = 'visibilitychange';
-        }
-        else if (typeof document.mozHidden !== 'undefined') {
-            visibilityChange = 'mozvisibilitychange';
-        }
-        else if (typeof document.msHidden !== 'undefined') {
-            visibilityChange = 'msvisibilitychange';
-        }
-        else if (typeof document.webkitHidden !== 'undefined') {
-            visibilityChange = 'webkitvisibilitychange';
-        }
-        document.addEventListener(visibilityChange, function() {
-            if (game.System.pauseOnHide) {
-                var hidden = !!game._getVendorAttribute(document, 'hidden');
-                if (hidden) game.system.pause(true);
-                else game.system.resume(true);
+        if (game.System.retina && game.device.pixelRatio === 2) {
+            // Check if we are already using highest textures
+            if (game.scale < game.System.hires) {
+                this.retina = true;
+                width *= 2;
+                height *= 2;
+                game.scale *= 2;
             }
-        });
-
-        if (game.System.resize) game.System.center = false;
-
-        if (game.device.mobile) {
-            window.addEventListener('devicemotion', function(event) {
-                game.accelerometer = event.accelerationIncludingGravity;
-            });
         }
 
-        game.renderer = new game.Renderer(this.canvasWidth, this.canvasHeight);
+        this.width = width;
+        this.height = height;
+        this.canvasId = game.System.canvasId;
+        this.timer = new game.Timer();
+
+        this.initRenderer(width, height);
+
+        game._normalizeVendorAttribute(this.canvas, 'requestFullscreen');
+        game._normalizeVendorAttribute(this.canvas, 'requestFullScreen');
+        game._normalizeVendorAttribute(navigator, 'vibrate');
+
+        document.body.style.margin = 0;
 
         if (this.retina) {
-            this.canvasWidth /= 2;
-            this.canvasHeight /= 2;
+            this.canvas.style.width = width / 2 + 'px';
+            this.canvas.style.height = height / 2 + 'px';
+        }
+        else {
+            this.canvas.style.width = width + 'px';
+            this.canvas.style.height = height + 'px';
         }
 
-        window.addEventListener('resize', this._onWindowResize.bind(this));
-        this._onWindowResize();
+        game.renderer = this.renderer;
+
+        if (!game.device.cocoonJS) {
+            var visibilityChange;
+            if (typeof document.hidden !== 'undefined') {
+                visibilityChange = 'visibilitychange';
+            }
+            else if (typeof document.mozHidden !== 'undefined') {
+                visibilityChange = 'mozvisibilitychange';
+            }
+            else if (typeof document.msHidden !== 'undefined') {
+                visibilityChange = 'msvisibilitychange';
+            }
+            else if (typeof document.webkitHidden !== 'undefined') {
+                visibilityChange = 'webkitvisibilitychange';
+            }
+
+            document.addEventListener(visibilityChange, function() {
+                if (game.System.pauseOnHide) {
+                    var hidden = !!game._getVendorAttribute(document, 'hidden');
+                    if (hidden) game.system.pause(true);
+                    else game.system.resume(true);
+                }
+            }, false);
+
+            if (game.System.bgColor && !game.System.bgColorMobile) game.System.bgColorMobile = game.System.bgColor;
+            if (game.System.bgColorMobile && !game.System.bgColorRotate) game.System.bgColorRotate = game.System.bgColorMobile;
+
+            if (game.System.bgImage && !game.System.bgImageMobile) game.System.bgImageMobile = game.System.bgImage;
+            if (game.System.bgImageMobile && !game.System.bgImageRotate) game.System.bgImageRotate = game.System.bgImageMobile;
+
+            if (!game.device.mobile) {
+                if (game.System.bgColor) document.body.style.backgroundColor = game.System.bgColor;
+                if (game.System.bgImage) document.body.style.backgroundImage = 'url(' + game.getMediaPath(game.System.bgImage) + ')';
+            }
+            if (game.System.bgPosition) document.body.style.backgroundPosition = game.System.bgPosition;
+
+            this.initResize();
+        }
+        else {
+            this.resizeToFill();
+            this.canvas.style.cssText = 'idtkscale:' + game.System.idtkScale + ';';
+        }
+    },
+
+    initRenderer: function(width, height) {
+        if (!document.getElementById(this.canvasId)) {
+            var canvas = document.createElement('canvas');
+            if (game.device.cocoonJS) canvas.screencanvas = !!game.System.screenCanvas;
+            canvas.id = this.canvasId;
+            document.body.appendChild(canvas);
+        }
+
+        game.PIXI.scaleModes.DEFAULT = game.PIXI.scaleModes[game.System.scaleMode.toUpperCase()] || 0;
+
+        if (game.System.webGL && game.device.cocoonJS) {
+            width = window.innerWidth * game.device.pixelRatio;
+            height = window.innerHeight * game.device.pixelRatio;
+        }
+
+        if (game.System.webGL) this.renderer = game.autoDetectRenderer(width, height, {
+            view: document.getElementById(this.canvasId),
+            transparent: game.System.transparent,
+            antialias: game.System.antialias
+        });
+        else this.renderer = new game.CanvasRenderer(width, height, {
+            view: document.getElementById(this.canvasId),
+            transparent: game.System.transparent
+        });
+
+        this.webGL = !!this.renderer.gl;
+        this.canvas = this.renderer.view;
+        this.stage = new game.Stage();
+    },
+
+    resizeToFill: function() {
+        if (!game.System.resizeToFill || !game.device.mobile) return;
+        if (this.rotateScreenVisible) return;
+
+        if (this._resizeToFill) return;
+        this._resizeToFill = true;
+
+        var gameOrientation = this.width > this.height ? 'landscape' : 'portrait';
+        var gameRatio = this.width / this.height;
+        var screenOrientation = window.innerWidth > window.innerHeight ? 'landscape' : 'portrait';
+        var screenRatio = window.innerWidth / window.innerHeight;
+
+        if (screenRatio !== gameRatio && gameOrientation === screenOrientation) {
+            if (gameRatio < screenRatio) {
+                // Letterbox left/right
+                this.width = Math.round(this.height * (window.innerWidth / window.innerHeight));
+            }
+            else {
+                // Letterbox top/bottom
+                this.height = Math.round(this.width * (window.innerHeight / window.innerWidth));
+            }
+            this.resize(this.width, this.height);
+        }
     },
 
     /**
@@ -157,8 +241,8 @@ game.createClass('System', {
         @method fullscreen
     **/
     fullscreen: function() {
-        if (game.renderer.canvas.requestFullscreen) game.renderer.canvas.requestFullscreen();
-        else if (game.renderer.canvas.requestFullScreen) game.renderer.canvas.requestFullScreen();
+        if (this.canvas.requestFullscreen) this.canvas.requestFullscreen();
+        else if (this.canvas.requestFullScreen) this.canvas.requestFullScreen();
     },
 
     /**
@@ -167,270 +251,370 @@ game.createClass('System', {
         @return {Boolean} Return true, if browser supports fullscreen mode.
     **/
     fullscreenSupport: function() {
-        return !!(game.renderer.canvas.requestFullscreen || game.renderer.canvas.requestFullScreen);
+        return !!(this.canvas.requestFullscreen || this.canvas.requestFullScreen);
     },
 
     /**
-        Resize system.
-        @method resize
-        @param {Number} width
-        @param {Number} height
+        Vibrate device.
+        @method vibrate
+        @param {Number} time Time to vibrate.
     **/
-    resize: function(width, height) {
-        if (this.width === width && this.height === height) return;
-        game.width = this.width = width / game.scale;
-        game.height = this.height = height / game.scale;
-        game.renderer._resize(width, height);
-        if (game.scene && game.scene.onResize) game.scene.onResize();
+    vibrate: function(time) {
+        if (navigator.vibrate) return navigator.vibrate(time);
+        return false;
     },
 
     /**
         Pause game engine.
         @method pause
-        @param {Boolean} onHide
     **/
     pause: function(onHide) {
         if (this.paused) return;
-        if (onHide) this._pausedOnHide = true;
+        if (onHide) this.pausedOnHide = true;
         else this.paused = true;
-        if (game.scene && game.scene._pause) game.scene._pause();
+
+        if (game.scene) game.scene.pause();
     },
 
     /**
-        Resume game engine.
+        Resume paused game engine.
         @method resume
-        @param {Boolean} onHide
     **/
     resume: function(onHide) {
         if (onHide && this.paused) return;
         if (!onHide && !this.paused) return;
-        if (onHide) this._pausedOnHide = false;
+        if (onHide) this.pausedOnHide = false;
         else this.paused = false;
+
         game.Timer.last = Date.now();
-        if (game.scene && game.scene._resume) game.scene._resume();
+        if (game.scene) game.scene.resume();
     },
 
     /**
         Change current scene.
         @method setScene
-        @param {String} sceneName
+        @param {String} sceneClass
+        @param {Boolean} removeAssets
     **/
-    setScene: function(sceneName) {
-        var sceneClass = game[sceneName];
-        if (!sceneClass) return;
-        this.sceneName = sceneName;
-        if (this._running && !this.paused) this._newSceneClass = sceneClass;
-        else this._setSceneNow(sceneClass);
+    setScene: function(sceneClass, removeAssets) {
+        this.currentSceneName = sceneClass;
+        sceneClass = game[sceneClass];
+        if (this.running && !this.paused) {
+            this.newSceneClass = sceneClass;
+            this.removeAssets = removeAssets;
+        }
+        else this.setSceneNow(sceneClass, removeAssets);
     },
 
-    /**
-        @method _scale
-        @param {Number} width
-        @param {Number} height
-        @private
-    **/
-    _scale: function(width, height) {
-        if (!game.System.scale) return;
-        
-        if (width / this.originalWidth < height / this.originalHeight) {
-            this.canvasWidth = width;
-            this.canvasHeight = ~~(width * (this.originalHeight / this.originalWidth));
-        }
-        else {
-            this.canvasWidth = ~~(height * (this.originalWidth / this.originalHeight));
-            this.canvasHeight = height;
-        }
-    },
-
-    /**
-        @method _resize
-        @param {Number} width
-        @param {Number} height
-        @private
-    **/
-    _resize: function(width, height) {
-        if (!game.System.resize) return;
-        if (!game.System.scale) {
-            this.resize(width, height);
-            this.canvasWidth = width;
-            this.canvasHeight = height;
-            return;
-        }
-
-        var widthSpace = width - this.canvasWidth;
-        var heightSpace = height - this.canvasHeight;
-
-        if (widthSpace > 0) {
-            var ratio = widthSpace / this.canvasWidth;
-            var newWidth = ~~(this.originalWidth * game.scale + this.originalWidth * ratio * game.scale);
-            
-            this.resize(newWidth, this.originalHeight * game.scale);
-            this.canvasWidth += widthSpace;
-        }
-        else if (heightSpace > 0) {
-            var ratio = heightSpace / this.canvasHeight;
-            var newHeight = ~~(this.originalHeight * game.scale + this.originalHeight * ratio * game.scale);
-            
-            this.resize(this.originalWidth * game.scale, newHeight);
-            this.canvasHeight += heightSpace;
-        }
-    },
-
-    /**
-        @method _toggleRotateScreen
-        @private
-    **/
-    _toggleRotateScreen: function() {
-        if (!game.device.mobile || !game.System.rotateScreen) return false;
-
-        if (this.originalWidth > this.originalHeight && window.innerWidth < window.innerHeight ||
-            this.originalHeight > this.originalWidth && window.innerHeight < window.innerWidth) {
-            this._showRotateScreen();
-            return true;
-        }
-        
-        this._hideRotateScreen();
-        return false;
-    },
-
-    /**
-        @method _showRotateScreen
-        @private
-    **/
-    _showRotateScreen: function() {
-        if (this._rotateScreenVisible) return;
-        this._rotateScreenVisible = true;
-        game.renderer._hide();
-        document.body.className = game.System.rotateScreenClass;
-    },
-
-    /**
-        @method _hideRotateScreen
-        @private
-    **/
-    _hideRotateScreen: function() {
-        if (!this._rotateScreenVisible) return;
-        this._rotateScreenVisible = false;
-        game.renderer._show();
-        document.body.className = '';
-    },
-
-    /**
-        @method _onWindowResize
-        @private
-    **/
-    _onWindowResize: function() {
-        if (this._toggleRotateScreen()) return;
-
-        var width = window.innerWidth;
-        var height = window.innerHeight;
-
-        this._scale(width, height);
-        this._resize(width, height);
-
-        if (game.System.center) {
-            game.renderer._position((width - this.canvasWidth) / 2, (height - this.canvasHeight) / 2);
-        }
-
-        if (game.System.scale || game.System.resize || this.retina) {
-            game.renderer._size(this.canvasWidth, this.canvasHeight);
-        }
-
-        if (game._loader && !game._loader.started) game._loader.start();
-    },
-
-    /**
-        @method _setSceneNow
-        @param {Scene} sceneClass
-        @private
-    **/
-    _setSceneNow: function(sceneClass) {
+    setSceneNow: function(sceneClass, removeAssets) {
         if (this.paused) this.paused = false;
-        if (game.scene && game.scene.exit) game.scene.exit();
+        if (game.scene) game.scene.exit();
+        if (removeAssets) game.removeAssets();
         game.scene = new (sceneClass)();
-        this._newSceneClass = null;
-        this._startRunLoop();
+        if (game.Debug && game.Debug.enabled && !game.device.cocoonJS && !this.debug) this.debug = new game.Debug();
+        this.newSceneClass = null;
+        this.startRunLoop();
     },
 
-    /**
-        @method _startRunLoop
-        @private
-    **/
-    _startRunLoop: function() {
-        if (this._runLoopId) this._stopRunLoop();
-        this._runLoopId = game._setGameLoop(this._run.bind(this));
-        this._running = true;
+    startRunLoop: function() {
+        if (this.gameLoopId) this.stopRunLoop();
+        this.gameLoopId = game._setGameLoop(this.run.bind(this), this.canvas);
+        this.running = true;
     },
 
-    /**
-        @method _stopRunLoop
-        @private
-    **/
-    _stopRunLoop: function() {
-        game._clearGameLoop(this._runLoopId);
-        this._running = false;
+    stopRunLoop: function() {
+        game._clearGameLoop(this.gameLoopId);
+        this.running = false;
     },
 
-    /**
-        @method _run
-        @private
-    **/
-    _run: function() {
-        if (this.paused || this._pausedOnHide) return;
+    run: function() {
+        if (this.paused || this.pausedOnHide) return;
 
         game.Timer.update();
-        game.delta = this.delta = game.Timer.delta / 1000;
+        this.delta = this.timer.delta() / 1000;
 
-        game.input._update();
-        game.scene._update();
+        if (this.debug) this.debug.reset();
 
-        if (this._newSceneClass) this._setSceneNow(this._newSceneClass, this._removeAssets);
+        game.scene.run();
+
+        if (this.debug) this.debug.update();
+        if (this.newSceneClass) this.setSceneNow(this.newSceneClass, this.removeAssets);
+    },
+
+    resize: function(width, height) {
+        this.width = this.canvas.width = width;
+        this.height = this.canvas.height = height;
+        this.canvas.style.width = width + 'px';
+        this.canvas.style.height = height + 'px';
+        this.renderer.resize(this.width, this.height);
+    },
+
+    initResize: function() {
+        this.ratio = this.width > this.height ? this.width / this.height : this.height / this.width;
+
+        if (game.System.center) this.canvas.style.margin = 'auto';
+
+        if (game.device.mobile) {
+            // Mobile position
+            if (!game.System.center) {
+                this.canvas.style.position = 'absolute';
+                this.canvas.style.left = game.System.left + 'px';
+                this.canvas.style.top = game.System.top + 'px';
+            }
+
+            document.addEventListener('touchstart', function(e) {
+                e.preventDefault();
+            }, false);
+
+            if (game.System.rotateScreen) {
+                var div = document.createElement('div');
+                div.innerHTML = game.System.rotateImg ? '' : game.System.rotateMsg;
+                div.style.position = 'absolute';
+                div.style.height = '12px';
+                div.style.textAlign = 'center';
+                div.style.left = 0;
+                div.style.right = 0;
+                div.style.top = 0;
+                div.style.bottom = 0;
+                div.style.margin = 'auto';
+                div.style.display = 'none';
+                div.id = 'panda-rotate';
+                game.System.rotateDiv = div;
+                document.body.appendChild(game.System.rotateDiv);
+
+                if (game.System.rotateImg) {
+                    var img = new Image();
+                    var me = this;
+                    img.onload = function() {
+                        div.image = img;
+                        div.style.height = img.height + 'px';
+                        div.appendChild(img);
+                        me.resizeRotateImage();
+                    };
+                    if (game.System.rotateImg.indexOf('data:') === 0) {
+                        img.src = game.System.rotateImg;
+                    }
+                    else {
+                        img.src = game.getMediaPath(game.System.rotateImg);
+                    }
+                    img.style.position = 'relative';
+                    img.style.maxWidth = '100%';
+                }
+            }
+        }
+        else {
+            // Desktop center
+            if (game.System.center || game.System.left || game.System.top) this.canvas.style.position = 'absolute';
+            if (game.System.center) {
+                this.canvas.style.top = 0;
+                this.canvas.style.left = 0;
+                this.canvas.style.bottom = 0;
+                this.canvas.style.right = 0;
+            }
+            else if (game.System.left || game.System.top) {
+                this.canvas.style.left = game.System.left + 'px';
+                this.canvas.style.top = game.System.top + 'px';
+            }
+
+            // Desktop scaling
+            if (game.System.scale) {
+                var minWidth = game.System.minWidth === 'auto' ? this.retina ? this.width / 4 : this.width / 2 : game.System.minWidth;
+                var minHeight = game.System.minHeight === 'auto' ? this.retina ? this.height / 4 : this.height / 2 : game.System.minHeight;
+                var maxWidth = game.System.maxWidth === 'auto' ? this.retina ? this.width / 2 : this.width : game.System.maxWidth;
+                var maxHeight = game.System.maxHeight === 'auto' ? this.retina ? this.height / 2 : this.height : game.System.maxHeight;
+                if (game.System.minWidth) this.canvas.style.minWidth = minWidth + 'px';
+                if (game.System.minHeight) this.canvas.style.minHeight = minHeight + 'px';
+                if (game.System.maxWidth && !game.System.scaleToFit) this.canvas.style.maxWidth = maxWidth + 'px';
+                if (game.System.maxHeight && !game.System.scaleToFit) this.canvas.style.maxHeight = maxHeight + 'px';
+            }
+        }
+
+        if (typeof window.onorientationchange !== 'undefined' && !game.device.android) {
+            window.onorientationchange = this.onResize.bind(this);
+        }
+        else {
+            window.onresize = this.onResize.bind(this);
+        }
+
+        this.onResize();
+    },
+
+    checkOrientation: function() {
+        this.orientation = window.innerWidth < window.innerHeight ? 'portrait' : 'landscape';
+        if (game.device.android2 && window.innerWidth === 320 && window.innerHeight === 251) {
+            // Android 2.3 portrait fix
+            this.orientation = 'portrait';
+        }
+
+        if (this.width > this.height && this.orientation !== 'landscape') this.rotateScreenVisible = true;
+        else if (this.width < this.height && this.orientation !== 'portrait') this.rotateScreenVisible = true;
+        else this.rotateScreenVisible = false;
+
+        if (!game.System.rotateScreen) this.rotateScreenVisible = false;
+
+        this.canvas.style.display = this.rotateScreenVisible ? 'none' : 'block';
+        if (game.System.rotateDiv) game.System.rotateDiv.style.display = this.rotateScreenVisible ? 'block' : 'none';
+
+        if (this.rotateScreenVisible && game.System.bgColorRotate) document.body.style.backgroundColor = game.System.bgColorRotate;
+        if (!this.rotateScreenVisible && game.System.bgColorMobile) document.body.style.backgroundColor = game.System.bgColorMobile;
+
+        if (this.rotateScreenVisible && game.System.bgImageRotate) document.body.style.backgroundImage = 'url(' + game.getMediaPath(game.System.bgImageRotate) + ')';
+        if (!this.rotateScreenVisible && game.System.bgImageMobile) document.body.style.backgroundImage = 'url(' + game.getMediaPath(game.System.bgImageMobile) + ')';
+
+        if (this.rotateScreenVisible && game.system && typeof game.system.pause === 'function') game.system.pause();
+        if (!this.rotateScreenVisible && game.system && typeof game.system.resume === 'function') game.system.resume();
+
+        if (this.rotateScreenVisible) this.resizeRotateImage();
+    },
+
+    resizeRotateImage: function() {
+        if (this.rotateScreenVisible && game.System.rotateDiv.image) {
+            if (window.innerHeight < game.System.rotateDiv.image.height) {
+                game.System.rotateDiv.image.style.height = window.innerHeight + 'px';
+                game.System.rotateDiv.image.style.width = 'auto';
+                game.System.rotateDiv.style.height = window.innerHeight + 'px';
+                game.System.rotateDiv.style.bottom = 'auto';
+            }
+        }
+    },
+
+    onResize: function() {
+        // Mobile orientation
+        if (game.device.mobile) this.checkOrientation();
+
+        if (!game.System.scale) return;
+
+        if (game.device.mobile) {
+            this.ratio = this.orientation === 'landscape' ? this.width / this.height : this.height / this.width;
+
+            this.resizeToFill();
+
+            // Mobile resize
+            var width = window.innerWidth;
+            var height = window.innerHeight;
+
+            // iOS innerHeight bug fixes
+            if (game.device.iOS7 && window.innerHeight === 256) height = 320;
+            if (game.device.iOS7 && window.innerHeight === 319) height = 320;
+            if (game.device.iOS7 && game.device.pixelRatio === 2 && this.orientation === 'landscape') height += 2;
+            if (game.device.iPad && height === 671) height = 672;
+
+            // Landscape game
+            if (this.width > this.height) {
+                if (this.orientation === 'landscape' && height * this.ratio <= width) {
+                    this.canvas.style.height = height + 'px';
+                    this.canvas.style.width = height * this.width / this.height + 'px';
+                }
+                else {
+                    this.canvas.style.width = width + 'px';
+                    this.canvas.style.height = width * this.height / this.width + 'px';
+                }
+            }
+            // Portrait game
+            else {
+                if (this.orientation === 'portrait' && width * this.ratio <= height) {
+                    this.canvas.style.width = width + 'px';
+                    this.canvas.style.height = width * this.height / this.width + 'px';
+                }
+                else {
+                    this.canvas.style.height = height + 'px';
+                    this.canvas.style.width = height * this.width / this.height + 'px';
+                }
+            }
+
+            if (!game.device.ejecta) window.scroll(0, 1);
+
+            if (!this.rotateScreenVisible && game.loader && !game.loader.started) game.loader.start();
+        }
+        else {
+            // Desktop resize
+            if (window.innerWidth === 0) return; // Chrome bug
+            if (window.innerWidth < this.width || window.innerHeight < this.height || game.System.scaleToFit) {
+                if (window.innerWidth / this.width < window.innerHeight / this.height) {
+                    this.canvas.style.width = window.innerWidth + 'px';
+                    this.canvas.style.height = Math.floor(window.innerWidth * (this.height / this.width)) + 'px';
+                }
+                else {
+                    this.canvas.style.height = window.innerHeight + 'px';
+                    this.canvas.style.width = Math.floor(window.innerHeight * (this.width / this.height)) + 'px';
+                }
+            }
+            else {
+                this.canvas.style.width = this.width + 'px';
+                this.canvas.style.height = this.height + 'px';
+            }
+        }
     }
 });
 
 game.addAttributes('System', {
     /**
-        Id for canvas element, where game is placed. If none found, it will be created.
-        @attribute {String} canvasId
-        @default canvas
-    **/
-    canvasId: 'canvas',
-    /**
-        Position canvas to center of window.
+        Enable/disable canvas centering.
         @attribute {Boolean} center
-        @default false
+        @default true
     **/
-    center: false,
+    center: true,
     /**
-        System height.
-        @attribute {Number} height
-        @default 600
+        Canvas position from left, when centering is disabled.
+        @attribute {Number} left
+        @default 0
     **/
-    height: 600,
+    left: 0,
     /**
-        HiRes mode multiplier.
+        Canvas position from top, when centering is disabled.
+        @attribute {Number} top
+        @default 0
+    **/
+    top: 0,
+    /**
+        Enable/disable canvas scaling.
+        @attribute {Boolean} resize
+        @default true
+    **/
+    scale: true,
+    /**
+        Minimum width for canvas, when using scaling on desktop.
+        @attribute {Number} minWidth
+        @default auto
+    **/
+    minWidth: 'auto',
+    /**
+        Minimum height for canvas, when using scaling on desktop.
+        @attribute {Number} minHeight
+        @default auto
+    **/
+    minHeight: 'auto',
+    /**
+        Maximum width for canvas, when using scaling on desktop.
+        @attribute {Number} maxWidth
+        @default auto
+    **/
+    maxWidth: 'auto',
+    /**
+        Maximum height for canvas, when using scaling on desktop.
+        @attribute {Number} maxHeight
+        @default auto
+    **/
+    maxHeight: 'auto',
+    /**
+        Scaling method for CocoonJS.
+        @attribute {ScaleToFill|ScaleAspectFit|ScaleAspectFill} idtkScale
+        @default ScaleAspectFit
+    **/
+    idtkScale: 'ScaleAspectFit',
+    /**
+        Use ScreenCanvas on CocoonJS.
+        http://support.ludei.com/hc/en-us/articles/201810268-ScreenCanvas
+        @attribute {Boolean} screenCanvas
+        @default true
+    **/
+    screenCanvas: true,
+    /**
+        HiRes mode.
         @attribute {Number} hires
         @default 0
     **/
     hires: 0,
-    /**
-        Ratio value, when hires mode is used.
-        @attribute {Number} hiresRatio
-        @default 2
-    **/
-    hiresRatio: 2,
-    /**
-        Pause engine, when page is hidden.
-        @attribute {Boolean} pauseOnHide
-        @default true
-    **/
-    pauseOnHide: true,
-    /**
-        Resize canvas to fill window.
-        @attribute {Boolean} resize
-        @default false
-    **/
-    resize: false,
     /**
         Use Retina mode.
         @attribute {Boolean} retina
@@ -438,35 +622,131 @@ game.addAttributes('System', {
     **/
     retina: false,
     /**
+        Pause game engine, when page is hidden.
+        @attribute {Boolean} pauseOnHide
+        @default true
+    **/
+    pauseOnHide: true,
+    /**
         Use rotate screen on mobile.
         @attribute {Boolean} rotateScreen
         @default true
     **/
     rotateScreen: true,
     /**
-        Class name for document body, when rotate screen visible.
-        @attribute {String} rotateScreenClass
-        @default rotate
+        System width.
+        @attribute {Number} width
+        @default 1024
     **/
-    rotateScreenClass: 'rotate',
+    width: 1024,
     /**
-        Scale canvas to fit window.
-        @attribute {Boolean} scale
+        System height.
+        @attribute {Number} height
+        @default 768
+    **/
+    height: 768,
+    /**
+        Body background color.
+        @attribute {String} bgColor
+        @default null
+    **/
+    bgColor: null,
+    /**
+        Body background color for mobile.
+        @attribute {String} bgColorMobile
+        @default null
+    **/
+    bgColorMobile: null,
+    /**
+        Body background color for mobile rotate screen.
+        @attribute {String} bgColorRotate
+        @default null
+    **/
+    bgColorRotate: null,
+    /**
+        Body background image.
+        @attribute {String} bgImage
+        @default null
+    **/
+    bgImage: null,
+    /**
+        Body background image for mobile.
+        @attribute {String} bgImageMobile
+        @default null
+    **/
+    bgImageMobile: null,
+    /**
+        Body background image for mobile rotate screen.
+        @attribute {String} bgImageRotate
+        @default null
+    **/
+    bgImageRotate: null,
+    /**
+        Body background image position.
+        @attribute {String} bgPosition
+        @default null
+    **/
+    bgPosition: null,
+    /**
+        Rotate message for mobile.
+        @attribute {String} rotateMsg
+        @default Please rotate your device
+    **/
+    rotateMsg: 'Please rotate your device',
+    /**
+        Rotate image for mobile.
+        @attribute {URL} rotateImg
+        @default null
+    **/
+    rotateImg: null,
+    /**
+        Enable WebGL renderer.
+        @attribute {Boolean} webGL
         @default false
     **/
-    scale: false,
+    webGL: false,
     /**
-        Name of start scene.
+        Use transparent renderer.
+        @attribute {Boolean} transparent
+        @default false
+    **/
+    transparent: false,
+    /**
+        Use antialias (only on WebGL).
+        @attribute {Boolean} antialias
+        @default false
+    **/
+    antialias: false,
+    /**
+        Resize canvas to fill screen on mobile.
+        @attribute {Boolean} resizeToFill
+        @default false
+    **/
+    resizeToFill: false,
+    /**
+        Default start scene.
         @attribute {String} startScene
         @default Main
     **/
     startScene: 'Main',
     /**
-        System width.
-        @attribute {Number} width
-        @default 800
+        Scale canvas to fit window size on desktop.
+        @attribute {Boolean} scaleToFit
+        @default false
     **/
-    width: 800
+    scaleToFit: false,
+    /**
+        Id for canvas element.
+        @attribute {String} canvasId
+        @default canvas
+    **/
+    canvasId: 'canvas',
+    /**
+        Canvas scale mode.
+        @attribute {String} scaleMode
+        @default linear
+    **/
+    scaleMode: 'linear'
 });
 
 });

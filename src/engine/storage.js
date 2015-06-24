@@ -5,6 +5,7 @@ game.module(
     'engine.storage'
 )
 .body(function() {
+'use strict';
 
 /**
     Local storage.

@@ -4,7 +4,7 @@ Small GTA like topdown shooting game for practice.
 
 ## Engine
 
-Based on `develop` branch "9969cbc" commit.
+[Panda Engine - v1.13.5](https://github.com/pixelpicosean/panda.js)
 
 ## Info
 

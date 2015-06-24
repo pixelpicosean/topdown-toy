@@ -41,24 +41,27 @@ game.module(
 
 
   game.createClass('Menu', 'BaseScene', {
-    backgroundColor: '#000',
+    backgroundColor: 0x000000,
     init: function() {
       var self = this;
 
       var border = new game.Graphics().addTo(this.stage);
-      border.beginFill('#555');
-      border.drawRect(-60, -12, 120, 24);
+      border.beginFill(0x555555);
+      border.drawRect(-60, 5, 120, 24);
+      border.endFill();
+      border.x = game.system.width * 0.5;
 
       var baseY = 30;
       var items = menuData.selects.map(function(item, idx) {
-        var text = new game.Text(item.label, {
-          position: { y: baseY + idx * 24 },
-          anchor: { x: 0.5 },
+        var text = new game.BitmapText(item.label, {
           font: 'KenPixel'
         }).addTo(self.stage);
 
         // Align to the center
-        text.position.x = game.width * 0.5 - text.width * 0.5;
+        text.position.set(
+          game.system.width * 0.5 - text.width * 0.5,
+          baseY + idx * 24
+        );
 
         return text;
       });
@@ -102,8 +105,7 @@ game.module(
 
       // Handlers
       function onCursorMoved(idx) {
-        border.position.copy(items[idx].position)
-          .add(items[idx].width * 0.5, items[idx].height * 0.5 + 4);
+        border.position.y = items[idx].position.y;
       }
 
       function onItemActivated(idx) {

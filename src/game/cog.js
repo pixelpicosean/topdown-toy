@@ -36,9 +36,9 @@ game.module(
       this._dir = ZERO.clone();
 
       this.sprite = new game.SpriteSheet('cog', 24, 24).anim().addTo(container);
-      this.sprite.anchor.set(12, 12);
-      this.sprite.addAnim('idle', [0], { speed: 2 });
-      this.sprite.addAnim('run', [0, 1, 2, 3], { speed: 4 });
+      this.sprite.anchor.set(0.5, 0.5);
+      this.sprite.addAnim('idle', [0], { speed: 4 });
+      this.sprite.addAnim('run', [0, 1, 2, 3], { speed: 8 });
       this.sprite.position.set(x, y);
 
       this.body = new game.Body({

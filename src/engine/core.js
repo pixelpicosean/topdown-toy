@@ -1,14 +1,12 @@
+// Panda.js HTML5 game engine
+// created by Eemeli Kelokorpi
+
+'use strict';
+
 /**
-    Panda Engine
-
-    - Made by Eemeli Kelokorpi
-    - Renderer based on Pixi.js by Mat Groves, Goodboy Digital
-    - Financed by Yleisradio
-    - Released under the MIT license
-
     @module game
+    @namespace game
 **/
-
 /**
     @class Core
 **/
@@ -40,7 +38,7 @@ var game = {
         Current delta time in seconds.
         @property {Number} delta
     **/
-    delta: 0,
+    // delta: 0,
     /**
         Device information.
         @property {Object} device
@@ -55,11 +53,7 @@ var game = {
         Height of game.
         @property {Number} height
     **/
-    height: 0,
-    /**
-        @property {Input} input
-    **/
-    input: null,
+    // height: 0,
     /**
         List of JSON files.
         @property {Object} json
@@ -110,12 +104,12 @@ var game = {
         Engine version.
         @property {String} version
     **/
-    version: '2.0.0',
+    version: '1.13.5',
     /**
         Width of game.
         @property {Number} width
     **/
-    width: 0,
+    // width: 0,
     /**
         @property {Boolean} _booted
         @private
@@ -130,13 +124,14 @@ var game = {
         'engine.audio',
         'engine.camera',
         'engine.debug',
-        'engine.geometry',
-        'engine.input',
+        'engine.keyboard',
         'engine.loader',
         'engine.particle',
+        'engine.geometry',
         'engine.physics',
+        'engine.pixi',
         'engine.pool',
-        'engine.renderer.core',
+        'engine.renderer',
         'engine.scene',
         'engine.storage',
         'engine.system',
@@ -218,7 +213,7 @@ var game = {
         @param {String} [id]
     **/
     addAsset: function(path, id) {
-        this._addFileToQueue(path, id, 'assetQueue');
+        return this._addFileToQueue(path, id, 'assetQueue');
     },
 
     /**
@@ -228,7 +223,7 @@ var game = {
         @param {Object} attributes
     **/
     addAttributes: function(className, attributes) {
-        if (!this[className]) throw 'Class ' + className + ' not found';
+        if (!this[className]) throw 'class ' + className + ' not found';
 
         for (var name in attributes) {
             this[className][name] = attributes[name];
@@ -268,9 +263,10 @@ var game = {
         @method clearCache
     **/
     clearCache: function() {
-        this.Texture.clearCache();
-        this.BaseTexture.clearCache();
-        this.Font.clearCache();
+        // TODO: clear cache of PIXI
+        // this.Texture.clearCache();
+        // this.BaseTexture.clearCache();
+        // this.Font.clearCache();
         this.json = {};
         this.paths = {};
     },
@@ -563,8 +559,8 @@ var game = {
             this._DOMReady();
         }
         else {
-            document.addEventListener('DOMContentLoaded', this._DOMReady.bind(this));
-            window.addEventListener('load', this._DOMReady.bind(this));
+            document.addEventListener('DOMContentLoaded', this._DOMReady.bind(this), false);
+            window.addEventListener('load', this._DOMReady.bind(this), false);
         }
     },
 
@@ -611,6 +607,40 @@ var game = {
     _getVendorAttribute: function(el, attr) {
         var uc = attr.ucfirst();
         return el[attr] || el['ms' + uc] || el['moz' + uc] || el['webkit' + uc] || el['o' + uc];
+    },
+
+    /**
+        Remove asset from memory.
+        @method removeAsset
+        @param {String} id
+    **/
+    removeAsset: function(id) {
+        var path = this.paths[id];
+        if (this.json[path] && this.json[path].frames) {
+            // Sprite sheet
+            for (var key in this.json[path].frames) {
+                this.TextureCache[key].destroy(true);
+                delete this.TextureCache[key];
+            }
+        }
+        else if (this.TextureCache[path]) {
+            // Sprite
+            this.TextureCache[path].destroy(true);
+            delete this.TextureCache[path];
+        }
+        delete this.paths[id];
+    },
+
+    /**
+        Remove all assets from memory.
+        @method removeAssets
+    **/
+    removeAssets: function() {
+        for (var key in this.TextureCache) {
+            this.TextureCache[key].destroy(true);
+            delete this.TextureCache[key];
+        }
+        this.paths = {};
     },
 
     /**
@@ -864,7 +894,7 @@ var game = {
             }
         }
 
-        if (this.config.autoStart !== false && !this.system) this._start();
+        if (this.config.autoStart !== false && !this.system) this.start();
         else this.ready();
     },
 
@@ -895,7 +925,7 @@ var game = {
         @return {Number}
     **/
     _setGameLoop: function(callback) {
-        if (this.System.frameRate) return window.setInterval(callback, 1000 / this.System.frameRate);
+        if (this.System.frameRate) return window.setInterval(callback, 1000 / game.System.frameRate);
         if (window.requestAnimationFrame) {
             var id = this._gameLoopId++;
             this._gameLoops[id] = true;
@@ -929,18 +959,17 @@ var game = {
         @method _start
         @private
     **/
-    _start: function() {
+    start: function() {
         if (this._moduleQueue.length > 0) return;
 
         // Required classes
         this.system = new this.System();
-        this.input = new this.Input(this.renderer.canvas);
 
         // Optional classes
         if (this.Keyboard) this.keyboard = new this.Keyboard();
         if (this.Audio) this.audio = new this.Audio();
         if (this.Pool) this.pool = new this.Pool();
-        if (this.Debug && this.Debug.enabled) this.debug = new this.Debug();
+        if (this.DebugDraw && this.DebugDraw.enabled && this.Debug.enabled) this.debugDraw = new this.DebugDraw();
         if (this.Storage && this.Storage.id) this.storage = new this.Storage();
         if (this.Analytics && this.Analytics.id) this.analytics = new this.Analytics();
 
@@ -951,7 +980,7 @@ var game = {
 
         var loaderClass = this.Loader.className;
         this._loader = new this[loaderClass](this.System.startScene);
-        if (!this.system._rotateScreenVisible) this._loader.start();
+        if (!this.system.rotateScreenVisible) this._loader.start();
 
         this.onStart();
     }

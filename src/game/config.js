@@ -5,12 +5,11 @@ game.config = {
   system: {
     width: 240,
     height: 160,
+
     center: true,
     scale: true,
-    resize: false
-  },
+    scaleToFit: true,
 
-  renderer: {
     scaleMode: 'nearest',
     webGL: false
   }

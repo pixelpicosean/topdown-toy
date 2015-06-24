@@ -1,14 +1,17 @@
 /**
     @module pool
+    @namespace game
 **/
 game.module(
     'engine.pool'
 )
 .body(function() {
+'use strict';
 
 /**
     Object pool.
     @class Pool
+    @extends game.Class
 **/
 game.createClass('Pool', {
     /**
