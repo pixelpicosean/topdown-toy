@@ -113,7 +113,7 @@ game.module(
         /**
          * Set the points of the polygon.
          * @param {Array<game.Vector>=} points An array of vectors representing the points in the polygon,
-         *   in counter-clockwise order
+         *   in clockwise order
          * @return {game.Polygon} This for chaining
          */
         setPoints: function(points) {
@@ -332,7 +332,7 @@ game.module(
             }
             // Only apply response to B if it wants to
             else if (!responseToA && responseToB) {
-                uniqueB.position.subtract(response.overlapV);
+                uniqueB.position.add(response.overlapV);
                 uniqueB.afterCollide(uniqueA);
             }
             // Apply response to both A and B
@@ -394,7 +394,7 @@ game.module(
          * Update physics world.
          *  @method update
          */
-        update: function() {
+        _update: function() {
             var i, j,
                 bodies = this.spatialGrid.bodies;
             for (i = bodies.length - 1; i >= 0; i--) {
