@@ -84,7 +84,7 @@ game.module(
           return dir !== 0;
         });
 
-      var whenCursorMoved = whenUpOrDown
+      var cursorPointIndex = whenUpOrDown
         .scan(function(prev, next) {
           // Move between valid items
           if ((prev + next >= 0) && (prev + next < items.length)) {
@@ -101,14 +101,14 @@ game.module(
           return key === KEY_MAP.A;
         });
 
-      var whenItemActivated = whenCursorMoved.sampledBy(whenPressedA);
+      var whenItemActivated = cursorPointIndex.sampledBy(whenPressedA);
 
       // Handlers
-      function onCursorMoved(idx) {
+      function changeBorderPosition(idx) {
         border.position.y = items[idx].position.y;
       }
 
-      function onItemActivated(idx) {
+      function fireItemActiveEvent(idx) {
         self.events.emit(menuData.selects[idx].msg);
       }
 
@@ -131,8 +131,8 @@ game.module(
       }
 
       // Plug stream handlers
-      whenCursorMoved.onValue(onCursorMoved);
-      whenItemActivated.onValue(onItemActivated);
+      cursorPointIndex.onValue(changeBorderPosition);
+      whenItemActivated.onValue(fireItemActiveEvent);
       this.events.once('continue', continueGame);
       this.events.once('start', startNewGame);
       this.events.once('options', openOptions);
@@ -140,8 +140,8 @@ game.module(
 
       // Cleanup things when leave the scene
       this.events.once('exit', function() {
-        whenCursorMoved.offValue(onCursorMoved);
-        whenItemActivated.offValue(onItemActivated);
+        cursorPointIndex.offValue(changeBorderPosition);
+        whenItemActivated.offValue(fireItemActiveEvent);
 
         self.events.off('continue', continueGame);
         self.events.off('start', startNewGame);
