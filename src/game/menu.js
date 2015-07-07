@@ -16,12 +16,12 @@ game.module(
 
 
   // Variables
-  var ZERO = new game.Vector.ZERO;
+  var ZERO = game.Vector.ZERO;
 
-  var UP = new game.Vector.UP;
-  var DOWN = new game.Vector.DOWN;
-  var RIGHT = new game.Vector.RIGHT;
-  var LEFT = new game.Vector.LEFT;
+  var UP = game.Vector.UP;
+  var DOWN = game.Vector.DOWN;
+  var RIGHT = game.Vector.RIGHT;
+  var LEFT = game.Vector.LEFT;
 
   var KEY_MAP = game.G.KEY_MAP;
 
