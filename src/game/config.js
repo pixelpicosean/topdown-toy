@@ -1,5 +1,8 @@
 game.config = {
-  name: 'my-gta',
+  sourceFolder: 'src',
+  mediaFolder: 'media',
+
+  name: 'My Top-down Toy',
   version: '0.0.2',
 
   system: {
