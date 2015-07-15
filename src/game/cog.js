@@ -99,9 +99,28 @@ game.module(
       this.sprite.play('idle');
     },
     shoot: function() {
-      console.log('shoot');
+      new game.Bullet(this.body.position, this.sprite.rotation, this.sprite.parent);
     }
   });
 
+  game.createClass('Bullet', {
+    speed: 100,
+    init: function(pos, angle, container) {
+      var g = new game.Graphics().addTo(container);
+      g.beginFill(0xffeb3b);
+      g.drawRect(-8, -3, 16, 6);
+      g.endFill();
+
+      g.position.copy(pos);
+
+      var body = new game.Body({
+        position: g.position,
+        shape: new game.Rectangle(16, 6)
+      }).addTo(game.scene.world);
+      body.velocity.set(1, 0)
+        .rotate(angle)
+        .multiply(this.speed);
+    }
+  });
 
 });
