@@ -2,7 +2,8 @@ game.module(
   'game.cog'
 )
 .require(
-  'game.global'
+  'game.global',
+  'plugins.ninja-physics'
 )
 .body(function() { 'use strict';
 
@@ -26,7 +27,7 @@ game.module(
   // Object
   game.createClass('Cog', {
     speed: 50,
-    shootBetween: 900,
+    shootBetween: 100,
 
     sprite: null,
     body: null,
@@ -43,7 +44,7 @@ game.module(
 
       this.body = new game.Body({
         position: this.sprite.position,
-        shape: new game.Rectangle(16, 16),
+        shape: new game.Circle(8),
         collisionGroup: GROUPS.FRIEND,
         collideAgainst: [GROUPS.BLOCK]
       }).addTo(game.scene.world);
@@ -104,19 +105,35 @@ game.module(
   });
 
   game.createClass('Bullet', {
-    speed: 100,
+    speed: 300,
+    width: 8,
+    height: 3,
     init: function(pos, angle, container) {
       var g = new game.Graphics().addTo(container);
       g.beginFill(0xffeb3b);
-      g.drawRect(-8, -3, 16, 6);
+      g.drawRect(-this.width * 0.5, -this.height * 0.5, this.width * 0.5, this.height * 0.5);
       g.endFill();
 
       g.position.copy(pos);
+      g.rotation = angle;
 
       var body = new game.Body({
         position: g.position,
-        shape: new game.Rectangle(16, 6)
+        shape: new game.Rectangle(this.width, this.height),
+        collisionGroup: GROUPS.FRIEND_DAMAGER,
+        collideAgainst: [GROUPS.BLOCK],
+        collide: function(other) {
+          if (other.collisionGroup === GROUPS.BLOCK) {
+            body.remove();
+            g.remove();
+
+            return true;
+          }
+
+          return false;
+        }
       }).addTo(game.scene.world);
+      body.shape.setAngle(angle);
       body.velocity.set(1, 0)
         .rotate(angle)
         .multiply(this.speed);

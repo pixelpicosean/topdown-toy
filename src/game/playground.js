@@ -23,7 +23,7 @@ game.module(
       sprite.position.set(x, y);
 
       var body = new game.Body({
-        position: sprite.position,
+        position: { x: x, y: y },
         shape: new game.Rectangle(w, h),
         collisionGroup: GROUPS.BLOCK
       }).addTo(game.scene.world);
@@ -31,13 +31,13 @@ game.module(
   });
 
   game.createClass('Playground', 'BaseScene', {
-    backgroundColor: '#000',
+    backgroundColor: 0x000000,
     init: function() {
       var thickness = 20;
-      new Wall(game.width * 0.5, thickness * 0.5, game.width, thickness, this.stage);
-      new Wall(game.width * 0.5, game.height - thickness * 0.5, game.width, thickness, this.stage);
-      new Wall(thickness * 0.5, game.height * 0.5, thickness, game.height, this.stage);
-      new Wall(game.width - thickness * 0.5, game.height * 0.5, thickness, game.height, this.stage);
+      new Wall(game.system.width * 0.5, thickness * 0.5, game.system.width, thickness, this.stage);
+      new Wall(game.system.width * 0.5, game.system.height - thickness * 0.5, game.system.width, thickness, this.stage);
+      new Wall(thickness * 0.5, game.system.height * 0.5, thickness, game.system.height, this.stage);
+      new Wall(game.system.width - thickness * 0.5, game.system.height * 0.5, thickness, game.system.height, this.stage);
 
       new game.Cog(100, 100, this.stage);
     }

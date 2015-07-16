@@ -34,7 +34,10 @@ game.module(
       BLOCK: 1,
 
       FRIEND: 10,
-      FOE: 100
+      FOE: 100,
+
+      FRIEND_DAMAGER: 2,
+      FOE_DAMAGER: 3
     }
   };
 
