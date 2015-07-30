@@ -89,7 +89,7 @@ game.module(
     },
 
     changeDir: function(dir) {
-      this.body.velocity.copy(dir).normalize().multiply(this.speed);
+      this.body.velocity.copy(dir).normalize().scale(this.speed);
     },
     run: function() {
       // console.log('run');
@@ -136,7 +136,7 @@ game.module(
       body.shape.setAngle(angle);
       body.velocity.set(1, 0)
         .rotate(angle)
-        .multiply(this.speed);
+        .scale(this.speed);
     }
   });
 

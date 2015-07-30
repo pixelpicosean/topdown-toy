@@ -11,9 +11,8 @@ game.config = {
 
     center: true,
     scale: true,
-    scaleToFit: true,
+    resize: false,
 
-    scaleMode: 'nearest',
     webGL: false
   }
 };

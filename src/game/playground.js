@@ -3,7 +3,6 @@ game.module(
 )
 .require(
   'plugins.gamepad',
-  'plugins.eventemitter',
   'plugins.reactive',
 
   'game.global',
